@@ -14,6 +14,8 @@
 
 #include <iostream>
 #include <sstream>
+#include <fstream>
+#include <string>
 
 #include "ECBackend.h"
 #include "messages/MOSDPGPush.h"
@@ -1548,9 +1550,127 @@ int ECBackend::get_min_avail_to_read_shards(
   }
 
   set<int> need;
-  int r = ec_impl->minimum_to_decode(want, have, &need);
+ 
+
+  //int r = ec_impl->minimum_to_decode(want, have, &need);
+
+  /**
+   * Add by CaiYi
+   *
+   */
+ /*
+  string buffer;
+  ifstream in("/home/cai/nodes_cost.txt");
+  if(!in.is_open())
+  {
+	  dout(0)<<"error opening file"<<dendl;
+  }
+
+  while(getline(in,buffer))
+  {
+     if(buffer.length()!=0)
+	  dout(0)<<"从文件中读取的一行内容是：   "<<buffer<<dendl;
+  }
+
+
+  map<int,int> have_with_cost;
+  int cost = 0;
+  for(auto iter=have.begin();iter!=have.end();iter++)
+  {
+	  
+	  have_with_cost.insert(pair<int,int>(*iter,(cost+3-cost*cost)));
+	  dout(0)<<"节点序号是：  "<<*iter<<"    权值是 ：  "<<(cost+3-cost*cost)<<dendl;
+	  cost++;
+  }
+  int r = ec_impl->minimum_to_decode_with_cost(want,have_with_cost,&need);
+*/
+
+    map<int,int> nodes_cost;
+	string buffer;
+	ifstream in("/home/cai/nodes_cost.txt");
+	if(!in.is_open())
+	{
+		dout(-1)<<"error opening file"<<dendl;
+	}
+
+	while(getline(in,buffer))
+	{
+	   if(buffer.length()!=0)
+		 dout(0)<<"从文件中读取的一行内容是：   "<<buffer<<dendl;
+	   vector<int> tmp;
+	   string result;
+	   stringstream input(buffer);
+	   while(input>>result)
+	   {
+		  tmp.push_back(atoi(result.c_str()));
+	   }
+	   if(tmp.size()==2)
+	   nodes_cost.insert(pair<int,int>(tmp[0],tmp[1]));
+	}
+
+
+  map<int,int> have_with_cost;
+  for(set<int>::iterator iter=have.begin();iter!=have.end();iter++) //遍历have中的id
+  	{//have中是现有可以读取的shard id
+  		for(auto iter_shard=shards.begin();iter_shard!=shards.end();iter_shard++) //遍历shards
+  		{//map<shard_id_t, pg_shard_t> shards;
+  			int s_id = (iter_shard->first).id; //获取shard id  0 1 2等
+  			if(*iter==s_id) //如果have中的id 和 shards中的id 相同
+  			{ //通过shards结构体取得对应的OSD编号 然后通过osd编号 在nodes_cost中取得osd的cost
+  			  //然后将这个shard对应的osd_cost写入到have_with_cost
+  				int osd_id = (iter_shard->second).osd;
+  				int osd_cost = nodes_cost[osd_id];
+  				have_with_cost[*iter] = osd_cost;
+  				dout(0)<<"选取的 shard id为 ：　"<<*iter<<"  对应的osd id为   "<<osd_id<<"   对应的权值为   "
+  						<<osd_cost<<dendl;
+  			}
+  		}
+  	}
+
+
+
+
+  for(auto iter=have.begin();iter!=have.end();iter++)
+  {
+
+	  //have_with_cost.insert(pair<int,int>(*iter,(cost+3-cost*cost)));
+	  dout(0)<<"节点序号是：  "<<*iter<<"    权值是 ：  "<<have_with_cost[*iter]<<dendl;
+
+  }
+  int r = ec_impl->minimum_to_decode_with_cost(want,have_with_cost,&need);
+
+
+
+
+  /**
+   * Add ends
+   */
+  
+
   if (r < 0)
     return r;
+
+  /**
+   * Add by CaiYi
+   */
+  for(auto i=need.begin();i!=need.end();++i)
+  {
+	  dout(0)<<"need 节点是   "<<*i<<dendl;
+  }
+
+  for(auto h=have.begin();h!=have.end();++h)
+  {
+	  dout(0)<<"have 节点是  "<<*h<<dendl;
+  }
+
+  for(auto w=want.begin();w!=want.end();++w)
+  {
+	  dout(0)<<"want 节点是 "<<*w<<dendl;
+  }
+
+  /**
+   * Add ends
+   */
 
   if (do_redundant_reads) {
       need.swap(have);
@@ -1565,6 +1685,23 @@ int ECBackend::get_min_avail_to_read_shards(
     assert(shards.count(shard_id_t(*i)));
     to_read->insert(shards[shard_id_t(*i)]);
   }
+
+  /**
+   * Add by CaiYi
+   */
+
+ 
+   for(set<pg_shard_t>::iterator i = to_read->begin();i!=to_read->end();++i)
+  {
+	  int osd = i->osd;
+	  dout(0)<<"选择的OSD为    "<< osd<<dendl;
+  }
+
+
+  /**
+   * Add ends
+   */
+
   return 0;
 }
 

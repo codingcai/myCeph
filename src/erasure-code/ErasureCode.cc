@@ -17,7 +17,7 @@
 
 #include <errno.h>
 #include <algorithm>
-
+#include <utility>
 #include "ErasureCode.h"
 
 #include "common/strtol.h"
@@ -61,6 +61,7 @@ int ErasureCode::minimum_to_decode(const set<int> &want_to_read,
   return 0;
 }
 
+/*
 int ErasureCode::minimum_to_decode_with_cost(const set<int> &want_to_read,
                                              const map<int, int> &available,
                                              set<int> *minimum)
@@ -72,6 +73,56 @@ int ErasureCode::minimum_to_decode_with_cost(const set<int> &want_to_read,
     available_chunks.insert(i->first);
   return minimum_to_decode(want_to_read, available_chunks, minimum);
 }
+*/
+
+
+int ErasureCode::minimum_to_decode_with_cost(const set<int> &want_to_read,
+                                             const map<int, int> &available,
+                                             set<int> *minimum)
+{
+/*
+  set <int> available_chunks;
+  for (map<int, int>::const_iterator i = available.begin();
+       i != available.end();
+       ++i)
+    available_chunks.insert(i->first);
+  return minimum_to_decode(want_to_read, available_chunks, minimum);
+  */
+
+	set <int> available_chunks;
+	vector<pair<int,int>> available_cost;
+	for(map<int,int>::const_iterator i = available.begin();i!=available.end();i++)
+	{
+		available_cost.push_back(pair<int,int>(i->first,i->second));
+	}
+	auto cmp =[](std::pair<int,int> const&a,std::pair<int,int> const&b)
+	    {
+	        return a.second!=b.second? a.second<b.second:a.first<b.first;
+	    };
+
+	sort(available_cost.begin(),available_cost.end(),cmp);
+
+	//这里应该有一个判断就是如果avalable的个数是大于等于want的，那么可以这样，但是如果小于的话，那么
+	//执行原来的
+	if(want_to_read.size()<=available_cost.size())
+	{
+		for(int i=0;i<want_to_read.size();i++)
+		{
+			available_chunks.insert(available_cost[i].first);
+		}
+
+	}
+	else
+	{
+		for (map<int, int>::const_iterator i = available.begin();
+	 i != available.end();
+	 ++i)
+	 available_chunks.insert(i->first);
+	}
+
+	return minimum_to_decode(want_to_read, available_chunks, minimum);
+}
+
 
 int ErasureCode::encode_prepare(const bufferlist &raw,
                                 map<int, bufferlist> &encoded) const
