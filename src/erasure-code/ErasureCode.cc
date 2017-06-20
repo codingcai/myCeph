@@ -18,10 +18,15 @@
 #include <errno.h>
 #include <algorithm>
 #include <utility>
+#include <iostream>
 #include "ErasureCode.h"
 
 #include "common/strtol.h"
 #include "include/buffer.h"
+
+
+
+
 
 using namespace std;
 
@@ -106,9 +111,14 @@ int ErasureCode::minimum_to_decode_with_cost(const set<int> &want_to_read,
 	//执行原来的
 	if(want_to_read.size()<=available_cost.size())
 	{
+		
+		
 		for(int i=0;i<want_to_read.size();i++)
 		{
-			available_chunks.insert(available_cost[i].first);
+			
+			
+		  available_chunks.insert(available_cost[i].first);
+		      
 		}
 
 	}

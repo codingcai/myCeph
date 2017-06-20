@@ -1619,7 +1619,7 @@ int ECBackend::get_min_avail_to_read_shards(
   			{ //通过shards结构体取得对应的OSD编号 然后通过osd编号 在nodes_cost中取得osd的cost
   			  //然后将这个shard对应的osd_cost写入到have_with_cost
   				int osd_id = (iter_shard->second).osd;
-  				int osd_cost = nodes_cost[osd_id];
+  				int osd_cost = nodes_cost[osd_id]; //注意 map的性质 如果这里没有osd_id对应的信息，它会自动初始化，这里初始化为0
   				have_with_cost[*iter] = osd_cost;
   				dout(0)<<"选取的 shard id为 ：　"<<*iter<<"  对应的osd id为   "<<osd_id<<"   对应的权值为   "
   						<<osd_cost<<dendl;
@@ -2410,6 +2410,9 @@ void ECBackend::objects_read_and_reconstruct(
     
   map<hobject_t, read_request_t> for_read_op;
   for (auto &&to_read: reads) {
+    
+    dout(0)<<__func__<<"   这里查看每一个to_read的信息:   "<<to_read<<dendl;
+
     set<pg_shard_t> shards;
     int r = get_min_avail_to_read_shards(
       to_read.first,
@@ -2418,7 +2421,15 @@ void ECBackend::objects_read_and_reconstruct(
       fast_read,
       &shards);
     assert(r == 0);
+    
+    /**add By Caiyi**/
+    for(auto iter=shards.begin();iter!=shards.end();iter++)
+    {
+    	dout(0)<<__func__<<"  选择完节点之后的shard :  "<< iter->shard<<"  对应的OSD ： "<<iter->osd<<dendl;
+    }
 
+    /**end add**/
+  
     CallClientContexts *c = new CallClientContexts(
       to_read.first,
       this,
